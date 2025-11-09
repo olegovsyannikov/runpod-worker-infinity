@@ -20,13 +20,16 @@ COPY requirements.loadbalancer.txt /requirements.txt
 RUN uv pip install -r /requirements.txt --system
 
 # install torch
-RUN pip install torch==2.5.1+cu124 --index-url https://download.pytorch.org/whl/test/cu124 --no-cache-dir
+RUN pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124 --no-cache-dir
+
+# Set working directory
+WORKDIR /app
 
 # Add src files
-ADD src .
+ADD src /app
 
 # Expose port 80 for the load balancer
 EXPOSE 80
 
 # Start the FastAPI server
-CMD python -u /app.py
+CMD python -u app.py
