@@ -15,8 +15,8 @@ RUN apt-get update && apt-get install -y \
 # install uv
 RUN pip install uv
 
-# install python dependencies for serverless
-COPY requirements.serverless.txt /requirements.txt
+# install python dependencies for load balancing
+COPY requirements.loadbalancer.txt /requirements.txt
 RUN uv pip install -r /requirements.txt --system
 
 # install torch
@@ -25,8 +25,8 @@ RUN pip install torch==2.5.1+cu124 --index-url https://download.pytorch.org/whl/
 # Add src files
 ADD src .
 
-# Add test input
-COPY test_input.json /test_input.json
+# Expose port 80 for the load balancer
+EXPOSE 80
 
-# Start the serverless handler
-CMD python -u /handler.py
+# Start the FastAPI server
+CMD python -u /app.py

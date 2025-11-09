@@ -1,21 +1,57 @@
 services:
-    embedding-worker:
-      build:
-        context: .
-      # comment out the "command" if you just want to run the test_input.json
-      command: >
-        python -u /handler.py --rp_serve_api --rp_api_host=0.0.0.0
-      deploy:
-        resources:
-          reservations:
-            devices:
-              - driver: nvidia
-                count: all
-                capabilities: [gpu]
-      environment:
-        MODEL_NAMES: "BAAI/bge-small-en-v1.5"
-        NVIDIA_VISIBLE_DEVICES: "all"
-      volumes:
-        - ./data/runpod-volume:/runpod-volume
-      ports:
-        - "8000:8000"
+  # Serverless endpoint (traditional RunPod worker)
+  infinity-serverless:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - MODEL_NAMES=BAAI/bge-small-en-v1.5
+      - BATCH_SIZES=32
+      - BACKEND=torch
+      - DTYPES=auto
+      - INFINITY_QUEUE_SIZE=48000
+      - RUNPOD_MAX_CONCURRENCY=300
+    volumes:
+      - ./src:/src
+      - hf-cache:/runpod-volume
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    # Test with: python test_input.json or use RunPod SDK
+    command: >
+      python -u /handler.py --rp_serve_api --rp_api_host=0.0.0.0
+    ports:
+      - "8000:8000"
+
+  # Load balancing endpoint (FastAPI)
+  infinity-loadbalancer:
+    build:
+      context: .
+      dockerfile: Dockerfile.loadbalancer
+    ports:
+      - "8080:80"
+    environment:
+      - MODEL_NAMES=BAAI/bge-small-en-v1.5
+      - BATCH_SIZES=32
+      - BACKEND=torch
+      - DTYPES=auto
+      - PORT=80
+      - INFINITY_QUEUE_SIZE=48000
+      - RUNPOD_MAX_CONCURRENCY=300
+    volumes:
+      - ./src:/src
+      - hf-cache:/runpod-volume
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  hf-cache:
